@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "es2017",
+    "lib": [
+      "es2017",
+      "dom"
+    ],
+    "outDir": "dist",
+    "rootDir": "src",
+    "moduleResolution": "node",
+    "resolveJsonModule": true, // allow importing JSON files
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": "./",
+    "paths": {
+      "@/*": [
+        "src/*" // it is possible to use aliases because of Vite Bundler
+      ]
+    },
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

@@ -1,0 +1,163 @@
+import { gameOrchestrator } from '@/game/gameOrchestrator.js';
+import '@/components/navigation/TopBar.js';
+import '@/components/navigation/Logo.js';
+import '@/components/_templates/GenericModal.js';
+import '@/components/game/CreateTournament.js';
+import '@/components/game/ViewTournament.js';
+import '@/components/notification/ToogleChatBox.js';
+import { state } from '@/state';
+
+// TODO: THIS IS A MOCK, pass player names and avatars dynamically
+const PLAYER_1 = { name: '', avatar: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=alice' };
+const PLAYER_2 = { name: '', avatar: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=bob' };
+
+// // TODO FIX: use scale-100 if want to scale down border image
+// // remove 20px margin bottom from the border image?
+export function renderGame(containerId: string) {
+  document.body.classList.add('overflow-hidden'); // prevent scrolling during the game
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  container.innerHTML = `
+    <top-bar mode="game">
+      <pong-logo slot="logo-center"></pong-logo>
+    </top-bar>
+
+    <div class="game-area relative w-screen h-screen">
+      <div id="game-screen" class="absolute z-10"></div>
+      <img 
+        src="/public/game-border.png" 
+        alt="TV Frame"
+        class="absolute top-0 left-0 w-full h-full z-20 pointer-events-none"
+      />
+    </div>
+    <toggle-chat-box></toggle-chat-box>
+  `;
+
+  const orchestrator = new gameOrchestrator('game-screen');
+
+  // --- Event handler references for cleanup ---
+  const tournamentStageHandler = (e: CustomEvent) => {
+    const oldModal = container.querySelector('generic-modal');
+    if (oldModal) oldModal.remove();
+
+    // show the modal with the tournament view
+    container.insertAdjacentHTML('beforeend', `
+      <generic-modal dismissible="false" appear-delay="500">
+        <div slot="body" class="w-full h-full min-h-full flex justify-center items-center" id="tournament-modal-content"></div>
+      </generic-modal>
+    `);
+
+    const content = container.querySelector('#tournament-modal-content');
+    if (!content) return;
+
+    showTournamentView(e.detail.matches);
+
+    function showTournamentView(matches: Array<{ player1: string, player2: string }>) {
+      content.innerHTML = '';
+      const view = document.createElement('view-tournament');
+      (view as any).matchesData = matches;
+      content.appendChild(view);
+
+      // listen for the start-tournament-match event
+      // this means all config FE-BE was done successfully...
+      view.addEventListener('start-tournament-match', (e: CustomEvent) => {
+        const modal = container.querySelector('generic-modal');
+        if (modal) modal.remove();
+
+        // ...set players names, it comes from event detail
+        PLAYER_1.name = e.detail.player1;
+        PLAYER_2.name = e.detail.player2;
+
+        // ...re-render top bar with player info
+        // container.querySelector('top-bar').outerHTML = renderTopBar();
+        // ...finally, start the game
+        // this is an exception, as the game start is usually triggered by the gameOrchestrator
+        state.players = { p1: e.detail.player1, p2: e.detail.player2 }
+        orchestrator.startGame();
+      });
+    }
+  };
+
+  const openTournamentConfigHandler = () => {
+    container.insertAdjacentHTML('beforeend', `
+      <generic-modal dismissible="false" appear-delay="500">
+        <div slot="body" class="w-full h-full min-h-full flex justify-center items-center" id="tournament-modal-content"></div>
+      </generic-modal>
+    `);
+
+    const content = container.querySelector('#tournament-modal-content');
+    if (!content) return;
+
+    showTournamentConfig();
+
+    function showTournamentConfig() {
+      content.innerHTML = '';
+      const el = document.createElement('create-tournament');
+      content.appendChild(el);
+    }
+  };
+
+  // listen for remote games modal
+  const openRemoteGamesModalHandler = () => {
+    container.insertAdjacentHTML('beforeend', `
+      <generic-modal dismissible="true" appear-delay="500">
+        <div slot="body" class="w-full h-full min-h-full flex flex-col justify-center items-center p-8" id="remote-games-modal-content">
+          <div class="flex items-center justify-between w-full mb-6">
+            <h2 class="text-2xl font-bold text-white">Available Games</h2>
+            <button id="refresh-games-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+              🔄 Refresh
+            </button>
+          </div>
+          <div class="text-center text-gray-400">Loading games...</div>
+        </div>
+      </generic-modal>
+    `);
+
+    // add refresh button functionality
+    const refreshBtn = container.querySelector('#refresh-games-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        // dispatch refresh event that RemoteMultiplayerUI can listen to
+        window.dispatchEvent(new CustomEvent('refreshRemoteGames'));
+      });
+    }
+  };
+
+  const roomCreatedHandler = (e: CustomEvent) => {
+    setupInviteGame(e.detail.room, true);
+  };
+
+  const playerJoinedHandler = (e: CustomEvent) => {
+    const room = e.detail.room;
+    PLAYER_1.name = room.hostUsername;
+    PLAYER_2.name = room.guestUsername;
+  };
+
+  // --- Register event listeners ---
+  window.addEventListener('tournament-stage', tournamentStageHandler as EventListener);
+  window.addEventListener('openTournamentConfig', openTournamentConfigHandler as EventListener);
+  window.addEventListener('openRemoteGamesModal', openRemoteGamesModalHandler as EventListener);
+  window.addEventListener('roomCreated', roomCreatedHandler as EventListener);
+  window.addEventListener('playerJoined', playerJoinedHandler as EventListener);
+
+  // --- Expose cleanup for router navigation ---
+  (window as any).cleanupGame = () => {
+    try { document.body.classList.remove('overflow-hidden'); } catch { }
+    try { window.removeEventListener('tournament-stage', tournamentStageHandler as EventListener); } catch { }
+    try { window.removeEventListener('openTournamentConfig', openTournamentConfigHandler as EventListener); } catch { }
+    try { window.removeEventListener('openRemoteGamesModal', openRemoteGamesModalHandler as EventListener); } catch { }
+    try { window.removeEventListener('roomCreated', roomCreatedHandler as EventListener); } catch { }
+    try { window.removeEventListener('playerJoined', playerJoinedHandler as EventListener); } catch { }
+    try { (orchestrator as any).destroy?.(); } catch { }
+  };
+
+  function setupInviteGame(room: any, isHost: boolean) {
+    const remoteMultiplayerManager = (window as any).remoteMultiplayerManager;
+    if (remoteMultiplayerManager && !remoteMultiplayerManager.isInRoom()) {
+      remoteMultiplayerManager.setInviteRoom(room, isHost);
+    }
+    PLAYER_1.name = room.hostUsername;
+    PLAYER_2.name = room.guestUsername;
+  }
+}

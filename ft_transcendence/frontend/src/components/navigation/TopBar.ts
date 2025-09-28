@@ -1,0 +1,366 @@
+import * as authService from '@/services/authService.js';
+import { state } from '@/state';
+import { err } from '@/locales/Translations.js';
+import { navigate } from "@/main.js";
+import { renderLoading } from '@/pages/loading';
+import { actionIcons } from '@/utils/Constants.js';
+import { t } from '@/locales/Translations.js';
+
+const template = document.createElement('template');
+template.innerHTML = `
+  <style>
+    :host {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: var(--topbar-height);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--video-transition-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 9999;
+      box-shadow: 0 2px 12px #0002;
+      box-sizing: border-box;
+    }
+    .top-bar__inner {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 auto;
+      height: 100%;
+    }
+    .top-bar__left, .top-bar__right {
+      display: flex;
+      align-items: center;
+      gap: var(--topbar-gap);
+      height: 100%;
+    }
+    .top-bar__right {
+      flex: 0 0 var(--sidebar-width, 25vh);
+      min-width: var(--sidebar-width, 25vh);
+      max-width: var(--sidebar-width, 25vh);
+      justify-content: flex-end;
+      padding-right: 2rem;
+    }
+    .top-bar__left {
+      padding-left: 2rem;
+    }
+    .top-bar__title {
+      font-size: var(--header-font-size);
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px #0008;
+      user-select: none;
+      pointer-events: none;
+      white-space: nowrap;
+      margin-left: 0.1rem;
+    }
+
+    .top-bar__chat-button {
+      background: var(--video-transition-bg, rgba(0, 0, 0, 0.8));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50px;
+      color: white;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      user-select: none;
+      margin-left: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .top-bar__chat-button:hover {
+      background: var(--video-transition-bg, rgba(0, 0, 0, 0.9));
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .top-bar__chat-button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .top-bar__chat-button:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.6);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+    }
+
+    .top-bar__chat-icon {
+      width: 16px;
+      height: 16px;
+      filter: brightness(0) invert(1);
+    }
+    .top-bar__center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      width: auto;
+      height: auto;
+    }
+
+    .top-bar__center .top-bar__chat-button {
+      pointer-events: all;
+      margin-left: 1rem;
+    }
+
+    .top-bar__avatar {
+      width: var(--avatar-size);
+      height: var(--avatar-size);
+      border-radius: 50%;
+      background: none;
+      border: none;
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border: 2px solid var(--border);
+      box-shadow: var(--shadow-soft);
+    }
+    .top-bar__avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #fff2;
+    }
+
+    .top-bar__logout {
+      display: flex;
+      padding: var(--component-padding);
+      min-height: var(--toogle-height);
+      min-width: var(--button-min-width);
+      justify-content: center;
+      align-items: center;
+      gap: 0.5em;
+      cursor: pointer;
+      background: var(--body);
+      border: none;
+      color: var(--text);
+      font-size: var(--main-font-size);
+      font-weight: bold;
+      border: 2px solid var(--border);
+      box-shadow: var(--shadow-soft);
+    }
+    .top-bar__logout:hover {
+      background: var(--accent);
+    }
+    .top-bar__logout img {
+      filter: invert(var(--invert));
+    }
+    .top-bar__logout-icon {
+      width: var(--icon-size);
+      height: var(--icon-size);
+      vertical-align: middle;
+      margin-right: 0.25rem;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    ::slotted([slot="logo"]),
+    ::slotted([slot="logo-center"]) {
+      height: var(--logo-size);
+      display: flex;
+      align-items: center;
+    }
+
+    ::slotted([slot="player1-avatar"]),
+    ::slotted([slot="player1-username"]) {
+      display: inline-flex;
+      align-items: center;
+      font-size: var(--main-font-size);
+      color: var(--text);
+    }
+
+    .top-bar__left ::slotted([slot="player1-avatar"]) {
+      margin-right: 0.5rem;
+    }
+    .top-bar__left ::slotted([slot="player1-username"]) {
+      margin-left: 0;
+    }
+
+    .top-bar__right ::slotted([slot="player2-username"]) {
+      margin-right: 0.5rem;
+    }
+    .top-bar__right ::slotted([slot="player2-avatar"]) {
+      margin-left: 0;
+    }
+
+    ::slotted([slot="player1-avatar"]),
+    ::slotted([slot="player2-avatar"]) {
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 50%;
+      object-fit: cover;
+      display: inline-block;
+    }
+
+    /* Position chat button for game mode */
+    :host([mode="game"]) .top-bar__chat-button {
+      position: absolute;
+      left: calc(50% + 120px); /* Position to the right of centered title */
+      top: 50%;
+      transform: translateY(-50%);
+      margin-left: 0;
+    }
+
+    :host([mode="game"]) {
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+  </style>
+
+  <div class="top-bar__inner">
+    <div class="top-bar__left">
+      <slot name="logo"></slot>
+      <span class="top-bar__title"><slot name="title"></slot></span>
+
+      <slot name="player1-avatar"></slot>
+      <slot name="player1-username"></slot>
+    </div>
+
+    <div class="top-bar__center">
+      <slot name="logo-center"></slot>
+    </div>
+
+    <div class="top-bar__right">
+      <button class="top-bar__avatar" id="avatar" type="button">
+        <img src="" alt="Avatar" />
+      </button>
+      <slot name="toggle"></slot>
+      <slot name="language"></slot>
+      <button id="logout" class="top-bar__logout">
+        <span class="top-bar__logout-icon">${actionIcons.logout}</span>
+        <span class="top-bar__logout-text">${t('nav.logout')}</span>
+      </button>
+
+      <slot name="player2-username"></slot>
+      <slot name="player2-avatar"></slot>
+    </div>
+  </div>
+`;
+
+export class TopBar extends HTMLElement {
+  logoutButton: HTMLButtonElement | null = null;
+  profileButton: HTMLButtonElement | null = null;
+  private _onLogoutClick?: (e: Event) => void;
+  private _onProfileClick?: (e: Event) => void;
+  private _onUsernameUpdated?: () => void;
+  private _onAvatarUpdated?: () => void;
+
+  static get observedAttributes() {
+    return ['mode'];
+  }
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' }).appendChild(template.content.cloneNode(true));
+  }
+
+  connectedCallback() {
+    const shadow = this.shadowRoot;
+    this.logoutButton = shadow?.getElementById('logout') as HTMLButtonElement;
+    this.profileButton = shadow?.getElementById('avatar') as HTMLButtonElement;
+
+    // Store handlers so we can remove them later
+    this._onLogoutClick = (e: Event) => this.handleLogout(e);
+    this._onProfileClick = (e: Event) => this.handleProfile(e);
+    this._onUsernameUpdated = () => this.updateAvatar();
+    this._onAvatarUpdated = () => this.updateAvatar();
+
+    this.logoutButton?.addEventListener('click', this._onLogoutClick);
+    this.profileButton?.addEventListener('click', this._onProfileClick);
+
+    // SIMPLIFIED: Just one listener
+    window.addEventListener('username-updated', this._onUsernameUpdated);
+    window.addEventListener('avatar-updated', this._onAvatarUpdated);
+
+    this.updateAvatar();
+    this.updateButtons();
+  }
+
+  disconnectedCallback() {
+    // Remove all listeners to prevent leaks
+    if (this.logoutButton && this._onLogoutClick)
+      this.logoutButton.removeEventListener('click', this._onLogoutClick);
+    if (this.profileButton && this._onProfileClick)
+      this.profileButton.removeEventListener('click', this._onProfileClick);
+    if (this._onUsernameUpdated)
+      window.removeEventListener('username-updated', this._onUsernameUpdated);
+    if (this._onAvatarUpdated)
+      window.removeEventListener('avatar-updated', this._onAvatarUpdated);
+  }
+
+  private updateAvatar() {
+    const avatarImg = this.shadowRoot?.querySelector('.top-bar__avatar img') as HTMLImageElement;
+    if (!avatarImg) return;
+
+    const username = state.userData?.username;
+    const customAvatar = state.userData?.avatar;
+    // keep my comments
+    console.log('TopBar.updateAvatar customAvatar:', customAvatar);
+
+    if (customAvatar) {
+      // Use absolute path for avatar
+      avatarImg.src = `${window.location.origin}${customAvatar}?t=${Date.now()}`;
+    } else if (username) {
+      avatarImg.src = `https://api.dicebear.com/7.x/pixel-art/svg?seed=${username}`;
+    } else {
+      avatarImg.src = "https://api.dicebear.com/7.x/pixel-art/svg?seed=robot";
+    }
+  }
+
+  private updateButtons() {
+    const isGame = this.getAttribute('mode') === 'game';
+    const loggedIn = !!state.userData?.accessToken;
+    this.logoutButton?.classList.toggle('hidden', isGame || !loggedIn);
+    this.profileButton?.classList.toggle('hidden', isGame || !loggedIn);
+  }
+
+  private async handleLogout(e: Event) {
+    e.preventDefault();
+    const res = await authService.logout(state.userData?.refreshToken);
+    if (res?.error) {
+      console.error(err(res.error));
+      return;
+    }
+
+    state.userData = null;
+    renderLoading('app');
+    this.updateButtons();
+    setTimeout(() => {
+      navigate('/login');
+    }, 1200);
+  }
+
+  private handleProfile(e: Event) {
+    e.preventDefault();
+    const username = state.userData?.username;
+    if (username) navigate(`/profile/${username}`);
+  }
+}
+
+customElements.define('top-bar', TopBar);

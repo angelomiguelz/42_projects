@@ -1,0 +1,42 @@
+services:
+  frontend:
+    build: ./frontend
+    command: npm run dev -- --host
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "4000:4000"
+      - "4001:4001"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - db_data:/app/database
+      - uploads_data:/app/uploads
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "9019:9019"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/gen-cert-and-run.sh:/etc/nginx/gen-cert-and-run.sh:ro
+      - nginx_certs:/etc/nginx/certs
+      - uploads_data:/var/www/uploads
+    command: ["/bin/sh", "/etc/nginx/gen-cert-and-run.sh"]
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  db_data:
+    driver: local
+  uploads_data:
+    driver: local
+  nginx_certs:
+    driver: local
