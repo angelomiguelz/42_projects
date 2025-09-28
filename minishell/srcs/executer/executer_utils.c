@@ -1,0 +1,85 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   executer_utils.c                                   :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: svalente <svalente@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2023/11/08 16:41:17 by svalente          #+#    #+#             */
+/*   Updated: 2023/11/14 15:59:40 by svalente         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include <minishell.h>
+
+int	which_builtin(t_cmd *cmd)
+{
+	if (!ft_strcmp(cmd->args[0], "env"))
+		return (envp());
+	else if (!ft_strcmp(cmd->args[0], "pwd"))
+		return (pwd());
+	else if (!ft_strcmp(cmd->args[0], "echo"))
+		return (echo(cmd));
+	else if (!ft_strcmp(cmd->args[0], "cd"))
+		return (cd(cmd));
+	else if (!ft_strcmp(cmd->args[0], "export"))
+		return (export(cmd));
+	else if (!ft_strcmp(cmd->args[0], "unset"))
+		return (unset(cmd->args));
+	else if (!ft_strcmp(cmd->args[0], "exit"))
+		return (exit_builtin(cmd));
+	ft_putstr_fd("command not found\n", STDERR_FILENO);
+	return (127);
+}
+
+int	cmd_is_builtin(char *command)
+{
+	if (!ft_strcmp(command, "pwd") || \
+		!ft_strcmp(command, "cd") || \
+		!ft_strcmp(command, "exit") || \
+		!ft_strcmp(command, "env") || \
+		!ft_strcmp(command, "export") || \
+		!ft_strcmp(command, "unset") || \
+		!ft_strcmp(command, "echo"))
+		return (1);
+	else
+		return (0);
+}
+
+int	check_access(char *executable_path, char **matrix)
+{
+	if (access(executable_path, X_OK) == 0)
+	{
+		free_matrix(matrix);
+		return (0);
+	}
+	return (1);
+}
+
+char	*find_command_path(char *command)
+{
+	char	*path;
+	char	**matrix;
+	char	*executable_path;
+	char	*temp;
+	int		i;
+
+	path = node_value(search_env("PATH"));
+	i = -1;
+	if (path != NULL)
+	{
+		matrix = ft_split(path, ':');
+		free(path);
+		while (matrix != NULL && matrix[++i] != NULL)
+		{
+			temp = ft_strjoin_free(matrix[i], "/", 0);
+			executable_path = ft_strjoin_free(temp, command, 1);
+			if (!check_access(executable_path, matrix))
+				return (executable_path);
+			free(executable_path);
+		}
+		free_matrix(matrix);
+	}
+	executable_path = ft_strdup(command);
+	return (executable_path);
+}
