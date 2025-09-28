@@ -1,0 +1,74 @@
+Understanding the Ford-Johnson Merge-Insert Sort (Vector Version)
+
+1. INTRODUCTION
+---------------
+The sortV function is a special sorting algorithm that combines merging and insertion techniques to sort numbers efficiently. Think of it like organizing a deck of cards, but with a very specific strategy!
+
+2. THE BASIC IDEA
+----------------
+Instead of sorting all numbers at once, we:
+- Group numbers into pairs
+- Pick the bigger number from each pair
+- Sort these bigger numbers first
+- Cleverly insert the smaller numbers back
+
+3. STEP-BY-STEP BREAKDOWN
+------------------------
+Let's say we have these numbers: [5, 2, 8, 1, 9, 3, 7]
+
+A) MAKING PAIRS
+--------------
+First, we make pairs (last number might be alone):
+[5,2] [8,1] [9,3] [7]
+- From each pair, we separate bigger and smaller numbers
+- Bigger numbers go to "main": [5,8,9]
+- Smaller numbers go to "pend": [2,1,3]
+- Single number (7) is kept as "unsorted"
+
+B) RECURSIVE SORTING
+------------------
+We sort the "main" list (bigger numbers) first:
+- This happens by calling sortV again on the main list
+- This keeps happening until we have a tiny list that's easy to sort
+
+C) INSERTION PHASE
+----------------
+Now comes the clever part! We insert back the smaller numbers:
+1. First smaller number goes in first
+2. Then we use a special sequence (Jacobsthal sequence) to decide
+   which smaller number to insert next
+3. Finally, we insert any single "unsorted" number we had
+
+4. THE SPECIAL SEQUENCE (getInsertionSequence)
+-------------------------------------------
+This is like having a recipe for the perfect order to insert numbers:
+- Starts with position 1
+- Uses special numbers called "Jacobsthal numbers" (1,3,5,11,21...)
+- This sequence helps us insert numbers in a very efficient way
+
+5. THE INSERTION PROCESS (insertSorted)
+------------------------------------
+When we insert a number, we:
+- Use binary search to find the right spot quickly
+- It's like finding a name in a phone book - we check the middle,
+  then either the first or second half, and keep narrowing it down
+- Once we find the spot, we put the number there
+
+6. WHY IT'S CLEVER
+-----------------
+- We don't sort everything at once
+- We work with sorted and unsorted parts
+- The special sequence helps us minimize how many comparisons we need
+- Binary search makes inserting numbers faster
+
+7. EXAMPLE WITH SMALL NUMBERS
+---------------------------
+Starting with: [5, 2, 8, 1]
+1. Make pairs: [5,2] [8,1]
+2. Separate: main=[5,8], pend=[2,1]
+3. Sort main: [5,8]
+4. Insert from pend using sequence:
+   - Insert 2: [2,5,8]
+   - Insert 1: [1,2,5,8]
+
+This sorting method is like having a very organized strategy for cleaning up your room - instead of throwing everything everywhere, you have a specific plan that makes the whole process more efficient! 
