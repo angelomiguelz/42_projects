@@ -11,7 +11,7 @@ Each project was built hands-on, with no tutorials — just problem-solving, deb
 ## 🚀 Highlights
 
 - **[ft_transcendence](./ft_transcendence/README.md):** Full-stack web application: an online multiplayer Pong game with chat, friends system, and real-time gameplay.  
-  > **Note:** Originally a group project at 42. My personal contributions included **[list your key contributions here, e.g., frontend UI, WebSocket integration, authentication, database logic]**.  
+  > **Note:** Originally a group project at 42. My personal contributions included **[sockets and multiplayer intergration]**.  
 
 - **[Minishell](./Minishell/README.md):** A working Unix shell in C with pipes, redirections, built-ins, and signals.  
 - **[Inception](./Inception/README.md):** Full Docker setup with NGINX, WordPress, and MariaDB, all on Debian.  
